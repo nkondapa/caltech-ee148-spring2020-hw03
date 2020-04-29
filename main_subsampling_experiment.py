@@ -91,6 +91,8 @@ class Net(nn.Module):
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=10, kernel_size=(3, 3), stride=1, padding=2)
         self.conv2 = nn.Conv2d(in_channels=10, out_channels=10, kernel_size=(3, 3), stride=1, padding=2)
+        self.conv3 = nn.Conv2d(in_channels=10, out_channels=10, kernel_size=(3, 3), stride=1, padding=2)
+        self.conv4 = nn.Conv2d(in_channels=10, out_channels=10, kernel_size=(3, 3), stride=1, padding=2)
         self.bn1 = nn.BatchNorm2d(10)
         self.dropout1 = nn.Dropout2d(0.5)
         self.max_pool1 = nn.MaxPool2d(2)
@@ -112,10 +114,10 @@ class Net(nn.Module):
         x = self.bn1(x)
         x = self.max_pool1(x)
 
-        x = self.conv2(x)
+        x = self.conv3(x)
         x = F.relu(x)
 
-        x = self.conv2(x)
+        x = self.conv4(x)
         x = F.relu(x)
 
         x = torch.flatten(x, 1)

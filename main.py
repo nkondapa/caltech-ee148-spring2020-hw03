@@ -91,6 +91,8 @@ class Net(nn.Module):
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=10, kernel_size=(3, 3), stride=1, padding=2)
         self.conv2 = nn.Conv2d(in_channels=10, out_channels=10, kernel_size=(3, 3), stride=1, padding=2)
+        self.conv3 = nn.Conv2d(in_channels=10, out_channels=10, kernel_size=(3, 3), stride=1, padding=2)
+        self.conv4 = nn.Conv2d(in_channels=10, out_channels=10, kernel_size=(3, 3), stride=1, padding=2)
         self.bn1 = nn.BatchNorm2d(10)
         self.dropout1 = nn.Dropout2d(0.5)
         self.max_pool1 = nn.MaxPool2d(2)
@@ -103,31 +105,20 @@ class Net(nn.Module):
             print(p)
 
     def forward(self, x):
-        self.my_print(x.shape)
         x = self.conv1(x)
-        self.my_print(x.shape)
         x = F.relu(x)
-        self.my_print(x.shape)
 
         x = self.conv2(x)
-        self.my_print(x.shape)
         x = F.relu(x)
-        self.my_print(x.shape)
 
         x = self.bn1(x)
-        self.my_print(x.shape)
         x = self.max_pool1(x)
-        self.my_print(x.shape)
 
-        x = self.conv2(x)
-        self.my_print(x.shape)
+        x = self.conv3(x)
         x = F.relu(x)
-        self.my_print(x.shape)
 
-        x = self.conv2(x)
-        self.my_print(x.shape)
+        x = self.conv4(x)
         x = F.relu(x)
-        self.my_print(x.shape)
 
         x = torch.flatten(x, 1)
         x = self.fc1(x)
@@ -332,17 +323,17 @@ def main():
 
         # You may optionally save your model at each epoch here
 
-    if args.save_model:
-        torch.save(model.state_dict(), "mnist_model_epoch=" + str(epoch) + ".pt")
+        if args.save_model:
+            torch.save(model.state_dict(), "mnist_model_epoch=" + str(epoch) + ".pt")
 
     # Plotting
-    # plt.title('Train vs Val Loss')
-    # plt.plot(range(1, args.epochs+1), train_losses)
-    # plt.plot(range(1, args.epochs+1), test_losses, '--')
-    # plt.xlabel('Epoch')
-    # plt.ylabel('Loss')
-    # plt.legend(['train', 'test'])
-    # plt.savefig('./train_vs_val_loss')
+    plt.title('Train vs Val Loss')
+    plt.plot(range(1, args.epochs+1), train_losses)
+    plt.plot(range(1, args.epochs+1), test_losses, '--')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend(['train', 'test'])
+    plt.savefig('./train_vs_val_loss')
 
 
 if __name__ == '__main__':
