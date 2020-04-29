@@ -103,31 +103,20 @@ class Net(nn.Module):
             print(p)
 
     def forward(self, x):
-        self.my_print(x.shape)
         x = self.conv1(x)
-        self.my_print(x.shape)
         x = F.relu(x)
-        self.my_print(x.shape)
 
         x = self.conv2(x)
-        self.my_print(x.shape)
         x = F.relu(x)
-        self.my_print(x.shape)
 
         x = self.bn1(x)
-        self.my_print(x.shape)
         x = self.max_pool1(x)
-        self.my_print(x.shape)
 
         x = self.conv2(x)
-        self.my_print(x.shape)
         x = F.relu(x)
-        self.my_print(x.shape)
 
         x = self.conv2(x)
-        self.my_print(x.shape)
         x = F.relu(x)
-        self.my_print(x.shape)
 
         x = torch.flatten(x, 1)
         x = self.fc1(x)
@@ -276,73 +265,86 @@ def main():
     # plt.imshow(np.squeeze(np.array(train_dataset_augmented[index][0])))
     # plt.show()
 
-    # You can assign indices for training/validation or use a random subset for
-    # training by using SubsetRandomSampler. Right now the train and validation
-    # sets are built from the same indices - this is bad! Change it so that
-    # the training and validation sets are disjoint and have the correct relative sizes.
-    np.random.seed(10)
-    sort_dict = dict(zip(range(10), [[], [], [], [], [], [], [], [], [], [], []]))
-    for c, targ in enumerate(train_dataset.targets):
-        sort_dict[targ.item()].append(c)
+    subsamples = [0.5, 0.25, 0.125, 0.0625]
+    dsizes = []
+    final_train_losses = []
+    final_test_losses = []
+    for ss in subsamples:
+        # You can assign indices for training/validation or use a random subset for
+        # training by using SubsetRandomSampler. Right now the train and validation
+        # sets are built from the same indices - this is bad! Change it so that
+        # the training and validation sets are disjoint and have the correct relative sizes.
+        np.random.seed(10)
+        sort_dict = dict(zip(range(10), [[], [], [], [], [], [], [], [], [], [], []]))
+        for c, targ in enumerate(train_dataset.targets):
+            sort_dict[targ.item()].append(c)
 
-    subset_indices_valid = []
-    subset_indices_train = []
+        subset_indices_valid = []
+        subset_indices_train = []
+        tot_size = 0
+        for key in sort_dict.keys():
+            msize = int(round(len(sort_dict[key]) * ss))
+            tot_size += msize
+            ss_size = int(round(msize * 0.15))
+            shuffled_inds = np.random.permutation(sort_dict[key])
+            subset_indices_valid.extend(shuffled_inds[0:ss_size])
+            subset_indices_train.extend(shuffled_inds[ss_size:msize])
+        dsizes.append(tot_size)
 
-    for key in sort_dict.keys():
-        ss_size = int(round(len(sort_dict[key]) * 0.15))
-        shuffled_inds = np.random.permutation(sort_dict[key])
-        subset_indices_valid.extend(shuffled_inds[0:ss_size])
-        subset_indices_train.extend(shuffled_inds[ss_size:])
 
-    # check balance
-    # a = np.histogram(train_dataset.targets[subset_indices_valid], bins=np.linspace(-0.5, 9.5, 11))
-    # b = np.histogram(train_dataset.targets[subset_indices_train], bins=np.linspace(-0.5, 9.5, 11))
-    # print(a[0] / (a[0] + b[0]))
+        # check balance
+        # a = np.histogram(train_dataset.targets[subset_indices_valid], bins=np.linspace(-0.5, 9.5, 11))
+        # b = np.histogram(train_dataset.targets[subset_indices_train], bins=np.linspace(-0.5, 9.5, 11))
+        # print(a[0] / (a[0] + b[0]))
 
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset_augmented, batch_size=args.batch_size,
-        sampler=SubsetRandomSampler(subset_indices_train)
-    )
-    val_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch_size,
-        sampler=SubsetRandomSampler(subset_indices_valid)
-    )
+        train_loader = torch.utils.data.DataLoader(
+            train_dataset_augmented, batch_size=args.batch_size,
+            sampler=SubsetRandomSampler(subset_indices_train)
+        )
+        val_loader = torch.utils.data.DataLoader(
+            train_dataset, batch_size=args.batch_size,
+            sampler=SubsetRandomSampler(subset_indices_valid)
+        )
 
-    # Load your model [fcNet, ConvNet, Net]
-    # model = fcNet().to(device)
-    # model = ConvNet().to(device)
-    model = Net().to(device)
+        # Load your model [fcNet, ConvNet, Net]
+        # model = fcNet().to(device)
+        # model = ConvNet().to(device)
+        model = Net().to(device)
 
-    # Try different optimzers here [Adam, SGD, RMSprop]
-    optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
+        # Try different optimzers here [Adam, SGD, RMSprop]
+        optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
 
-    # Set your learning rate scheduler
-    scheduler = StepLR(optimizer, step_size=args.step, gamma=args.gamma)
+        # Set your learning rate scheduler
+        scheduler = StepLR(optimizer, step_size=args.step, gamma=args.gamma)
 
-    # Training loop
-    train_losses = []
-    test_losses = []
-    for epoch in range(1, args.epochs + 1):
-        train(args, model, device, train_loader, optimizer, epoch)
-        train_loss = test(model, device, train_loader, 'Train')
-        test_loss = test(model, device, val_loader)
-        train_losses.append(train_loss)
-        test_losses.append(test_loss)
-        scheduler.step()  # learning rate scheduler
+        # Training loop
+        train_losses = []
+        test_losses = []
+        for epoch in range(1, args.epochs + 1):
+            train(args, model, device, train_loader, optimizer, epoch)
+            train_loss = test(model, device, train_loader, 'Train')
+            test_loss = test(model, device, val_loader)
+            train_losses.append(train_loss)
+            test_losses.append(test_loss)
+            scheduler.step()  # learning rate scheduler
 
-        # You may optionally save your model at each epoch here
+            # You may optionally save your model at each epoch here
 
-    if args.save_model:
-        torch.save(model.state_dict(), "mnist_model_epoch=" + str(epoch) + ".pt")
+        if args.save_model:
+            torch.save(model.state_dict(), "mnist_model_subsample_size=" + str(ss) + ".pt")
 
+        final_train_loss = test(model, device, train_loader, 'Train')
+        final_test_loss = test(model, device, val_loader)
+        final_train_losses.append(final_train_loss)
+        final_test_losses.append(final_test_loss)
     # Plotting
-    # plt.title('Train vs Val Loss')
-    # plt.plot(range(1, args.epochs+1), train_losses)
-    # plt.plot(range(1, args.epochs+1), test_losses, '--')
-    # plt.xlabel('Epoch')
-    # plt.ylabel('Loss')
-    # plt.legend(['train', 'test'])
-    # plt.savefig('./train_vs_val_loss')
+    plt.title('Reduced Dataset Experiment')
+    plt.plot(np.log(dsizes), np.log(final_train_losses))
+    plt.plot(np.log(dsizes), np.log(final_test_losses), '--')
+    plt.xlabel('Log Dataset Size')
+    plt.ylabel('Log Loss')
+    plt.legend(['train', 'test'])
+    plt.savefig('./reduced_dataset_experiment')
 
 
 if __name__ == '__main__':
